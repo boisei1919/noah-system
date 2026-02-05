@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOAH_SYSTEM_TERMINAL_V.9.9</title>
+<style>
+  /* 폰트 로드 */
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Black+Ops+One&family=Rubik+Glitch&display=swap');
+
+  :root {
+    --bg-color: #050505;
+    --term-green: #00ff41;  
+    --alert-red: #ff0055;   
+    --kronos-gold: #d4af37; 
+    --glitch-pink: #ff00ff; 
+    --ui-dim: rgba(0, 255, 65, 0.1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background-color: var(--bg-color);
+    color: var(--term-green);
+    font-family: 'Share Tech Mono', monospace;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    cursor: crosshair;
+    /* 로딩 중일 때 스크롤 막기 */
+    overflow-y: hidden; 
+  }
+
+  /* 로딩이 끝나면 스크롤 허용하는 클래스 */
+  body.loaded {
+    overflow-y: auto;
+  }
+
+  /* CRT 스캔라인 (전체) */
+  body::before {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* =========================================
+     0. BOOT SEQUENCE (LOADING SCREEN)
+     ========================================= */
+  #boot-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #000;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    font-size: 1.2rem;
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+
+  /* 로딩 완료 시 사라지는 애니메이션 */
+  #boot-screen.hide {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(1.1); /* 약간 커지면서 사라짐 */
+    filter: blur(10px);
+  }
+
+  .boot-log-container {
+    width: 100%;
+    max-width: 600px;
+    height: 300px;
+    overflow: hidden;
+    border: 1px solid #333;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: rgba(0, 20, 0, 0.8);
+    position: relative;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+  }
+
+  .boot-log-text {
+    color: var(--term-green);
+    white-space: pre-wrap;
+    line-height: 1.5;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .progress-container {
+    width: 100%;
+    max-width: 600px;
+    height: 4px;
+    background: #111;
+    position: relative;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--term-green);
+    width: 0%;
+    box-shadow: 0 0 10px var(--term-green);
+    transition: width 0.1s;
+  }
+
+  .blink-cursor {
+    display: inline-block;
+    width: 10px;
+    height: 1.2rem;
+    background: var(--term-green);
+    animation: blink 0.5s infinite;
+    vertical-align: middle;
+  }
+
+  /* =========================================
+     MAIN CSS
+     ========================================= */
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  .glitch { animation: text-flicker 3s infinite; }
+  .redacted { background: currentColor; color: transparent; transition: 0.3s; cursor: help; }
+  .redacted:hover { background: transparent; color: inherit; }
+  
+  @keyframes text-flicker {
+    0% { opacity: 0.9; } 2% { opacity: 0.1; } 4% { opacity: 0.9; } 100% { opacity: 0.9; }
+  }
+
+  header {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border-bottom: 2px solid var(--term-green);
+    position: relative;
+  }
+
+  .main-title {
+    font-family: 'Rubik Glitch', cursive;
+    font-size: 5rem;
+    color: var(--term-green);
+    text-shadow: 4px 4px var(--alert-red);
+    margin: 0;
+  }
+
+  .lore-box {
+    margin-top: 30px;
+    background: var(--ui-dim);
+    padding: 20px;
+    border: 1px solid var(--term-green);
+    max-width: 600px;
+    text-align: left;
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+
+  .noise-meter {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    border: 1px solid var(--alert-red);
+    color: var(--alert-red);
+    padding: 10px;
+    font-weight: bold;
+  }
+
+  #database { padding: 100px 0; border-bottom: 1px dashed #333; }
+  .section-header { font-family: 'Black Ops One'; font-size: 3rem; margin-bottom: 50px; border-left: 10px solid currentColor; padding-left: 20px; }
+  .profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 40px; }
+  
+  .file-card {
+    border: 1px solid rgba(0, 255, 65, 0.3); padding: 30px; background: rgba(0, 20, 0, 0.4);
+    position: relative; transition: 0.3s;
+  }
+  .file-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,255,65,0.1); }
+  .file-card.danger { border-color: var(--alert-red); color: var(--alert-red); }
+  .stamp { position: absolute; top: 20px; right: 20px; border: 3px solid; padding: 5px 15px; font-weight: 900; transform: rotate(-15deg); opacity: 0.7; font-size: 1.2rem; }
+  .data-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px; }
+
+  #market { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); padding: 100px 0; border-top: 5px solid var(--kronos-gold); color: #ccc; }
+  .market-title { color: var(--kronos-gold); text-shadow: 0 0 15px var(--kronos-gold); }
+  .market-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+  
+  .item-card { background: #111; border: 1px solid #444; padding: 15px; transition: 0.2s; }
+  .item-card:hover { border-color: var(--kronos-gold); }
+  
+  .item-img {
+    width: 100%; height: 250px; object-fit: contain; background: #000; margin-bottom: 15px; border: 1px solid #333;
+    image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;
+  }
+  .price-tag { display: flex; justify-content: space-between; font-weight: bold; margin-top: 15px; padding-top: 10px; border-top: 1px solid #333; }
+  .btc { color: #f7931a; } .amp { color: #00bcd4; }
+
+  #security { background-color: #000; border-top: 10px solid var(--alert-red); padding: 100px 0; min-height: 100vh; position: relative; color: white; }
+  .tank-title { color: var(--alert-red); animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+  .wanted-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 50px; }
+  .poster { background: #ddd; color: #111; padding: 15px; transform: rotate(2deg); box-shadow: 10px 10px 20px black; }
+  .poster:nth-child(even) { transform: rotate(-1deg); }
+  .mugshot { height: 200px; background: #222; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #555; overflow: hidden; position: relative;}
+  .mugshot img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.5); }
+  .liquidated { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 2.5rem; color: var(--alert-red); border: 5px solid var(--alert-red); padding: 10px; font-weight: 900; background: rgba(255,255,255,0.7); }
+
+  #ip-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: none; flex-direction: column; justify-content: center; align-items: center; color: var(--alert-red); }
+  .trace-box { border: 2px solid var(--alert-red); padding: 40px; text-align: center; width: 80%; max-width: 600px; box-shadow: 0 0 50px var(--alert-red); }
+  .bar-bg { width: 100%; height: 20px; background: #300; margin: 20px 0; }
+  .bar-fill { height: 100%; background: var(--alert-red); width: 0%; transition: width 0.1s; }
+
+</style>
+</head>
+<body>
+
+  <!-- =====================================
+       BOOT SCREEN (LOADING)
+       ===================================== -->
+  <div id="boot-screen">
+    <div class="boot-log-container">
+      <div id="boot-text" class="boot-log-text"></div>
+      <span class="blink-cursor"></span>
+    </div>
+    <div style="width: 100%; max-width: 600px; display:flex; justify-content:space-between; margin-bottom:5px; font-size: 0.9rem; color: #555;">
+      <span>SYSTEM INITIALIZING...</span>
+      <span id="load-percent">0%</span>
+    </div>
+    <div class="progress-container">
+      <div id="boot-bar" class="progress-bar"></div>
+    </div>
+  </div>
+
+  <!-- 메인 컨텐츠 (로딩 전엔 숨겨져 있지는 않지만 덮여있음) -->
+
+  <!-- 헤더 -->
+  <header>
+    <div class="glitch main-title" data-text="UTOPIA_COMPLEX">UTOPIA_COMPLEX</div>
+    <div class="lore-box" id="lore-text">
+      > SYSTEM_BOOT_SEQUENCE...<br>
+      > CONNECTING TO [NOAH_CORE]... SUCCESS.<br>
+      > WORLD_STATE: 멸망 (APOCALYPSE)<br>
+      > LOCATION: 최후 거점 '콘크리트 방주'<br>
+      > PROTOCOL: <span style="color:var(--alert-red)">절대 정숙 (SILENCE)</span><br>
+      <br>
+      "소리를 내는 순간, 너는 더 이상 시민이 아니다."
+    </div>
+    <div class="noise-meter">
+      NOISE LEVEL: <span id="db-meter">12</span> dB <br>
+      STATUS: <span style="color:var(--term-green)">SAFE</span>
+    </div>
+  </header>
+
+  <!-- 프로필 -->
+  <section id="database" class="container">
+    <h2 class="section-header" style="color: var(--term-green);">PERSONNEL_DATABASE</h2>
+    <div class="profile-grid">
+      <div class="file-card">
+        <div class="stamp" style="color: var(--glitch-pink); border-color: var(--glitch-pink);">MAD DOCTOR</div>
+        <h2 style="color: var(--glitch-pink); border-bottom: 2px solid var(--glitch-pink); padding-bottom:10px;">ID: UNDERTAKER</h2>
+        <div class="data-row"><span>AFFILIATION</span> <span>Medical Sector</span></div>
+        <div class="data-row"><span>WEAPON</span> <span>Chainsaw (Modified)</span></div>
+        <div class="data-row"><span>HAIR</span> <span>Pink (#FF00FF)</span></div>
+        <div class="data-row"><span>NOTE</span> <span>수술 성공률 99.9% (원리 불명)</span></div>
+        <br>
+        <p style="font-size: 0.9rem; opacity: 0.8;">"감염의 해부자. 논리 회로 오류. <br><span class="redacted">빵젖소</span>에 대한 기묘한 집착을 보임."</p>
+      </div>
+      <div class="file-card danger">
+        <div class="stamp">CLASSIFIED</div>
+        <h2 style="border-bottom: 2px solid var(--alert-red); padding-bottom:10px;">ID: BREAD_COW</h2>
+        <div class="data-row"><span>SPECIES</span> <span>Mutant (Bovine-Human)</span></div>
+        <div class="data-row"><span>RESOURCE</span> <span class="redacted">HIGH_GRADE_MILK</span></div>
+        <div class="data-row"><span>RELATION</span> <span>Pet / Specimen</span></div>
+        <div class="data-row"><span>STATE</span> <span>Shame / Anxiety</span></div>
+        <br>
+        <p style="font-size: 0.9rem; opacity: 0.8;">"유토피아 컴플렉스의 희귀 자원 생산체.<br>주기적인 <span class="redacted">발정기</span> 데이터 관측 필요."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 마켓 -->
+  <section id="market">
+    <div class="container">
+      <h2 class="section-header market-title">KRONOS INDUSTRY</h2>
+      <p style="margin-bottom: 30px;">>> ENCRYPTED CHANNEL ESTABLISHED (익명 거래 보장)</p>
+      <div class="market-grid">
+        <div class="item-card">
+          <img src="https://i.ifh.cc/4RtgcR.jpg" class="item-img" alt="Hwangdo">
+          <h3 style="margin:0">황도 통조림 (2024)</h3>
+          <div class="price-tag"><span class="btc">₿ 0.002</span><span class="amp">💉 3 AMP</span></div>
+        </div>
+        <div class="item-card">
+          <img src="https://i.ifh.cc/mj2bDQ.jpg" class="item-img" alt="Silencer">
+          <h3 style="margin:0">MP5SD 소음기 부품</h3>
+          <div class="price-tag"><span class="btc">₿ 0.05</span><span class="amp">💉 80 AMP</span></div>
+        </div>
+        <div class="item-card">
+          <img src="https://i.ifh.cc/ocHDkt.jpg" class="item-img" alt="MonaLisa">
+          <h3 style="margin:0">불탄 모나리자 조각</h3>
+          <div class="price-tag"><span class="btc">₿ 12.5</span><span class="amp">💉 5000 AMP</span></div>
+        </div>
+        <div class="item-card">
+          <img src="https://i.ifh.cc/8spTO8.jpg" class="item-img" alt="Pills">
+          <h3 style="margin:0">수상한 알약 (랜덤)</h3>
+          <div class="price-tag"><span class="btc">₿ 0.0001</span><span class="amp">💉 0.5 AMP</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 정화조 -->
+  <section id="security">
+    <div id="ip-overlay">
+      <div class="trace-box">
+        <h1 style="font-size: 3rem; margin:0;">⚠️ WARNING ⚠️</h1>
+        <p style="font-size: 1.5rem;">UNAUTHORIZED ACCESS DETECTED</p>
+        <p>정화조 감시망에 포착되었습니다.</p>
+        <div class="bar-bg"><div class="bar-fill" id="trace-bar"></div></div>
+        <div id="trace-text">TRACING SIGNAL... 0%</div>
+        <button onclick="document.getElementById('ip-overlay').style.display='none'; alert('도망칠 수 없다.');" style="margin-top:20px; padding:10px 30px; background:var(--alert-red); border:none; font-weight:bold; cursor:pointer; display:none;" id="escape-btn">연결 강제 종료 시도</button>
+      </div>
+    </div>
+    <div class="container">
+      <h2 class="section-header tank-title">PURIFICATION TANK (정화조)</h2>
+      <p style="text-align: center; border: 1px solid white; padding: 10px;">※ 소음 유발자 및 반체제 인사 수배 명단 ※<br>신고 시: 배급표 2배 + 신선한 물 1L</p>
+      <div class="wanted-grid">
+        <div class="poster">
+          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2.5rem; margin:10px 0;">WANTED</h2>
+          <div class="mugshot">👻</div>
+          <div style="font-weight:bold;"><p>NAME: GHOST-04</p><p>CRIME: 자원 밀반출</p><p>REWARD: 항생제 1 Box</p></div>
+        </div>
+        <div class="poster">
+          <div class="liquidated">LIQUIDATED</div>
+          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2.5rem; margin:10px 0;">WANTED</h2>
+          <div class="mugshot" style="background:#500;">💀</div>
+          <div style="font-weight:bold;"><p>NAME: 김철수</p><p>CRIME: 코골이 (85dB)</p><p>STATUS: 즉결 처분 완료</p></div>
+        </div>
+        <div class="poster">
+          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2.5rem; margin:10px 0;">WANTED</h2>
+          <div class="mugshot">🐄</div>
+          <div style="font-weight:bold;"><p>TARGET: BREAD_COW</p><p>ORDER: <strong>생포 필수</strong></p><p>NOTE: 장의사 인계</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // =============================
+    // BOOT SEQUENCE SCRIPT
+    // =============================
+    const bootScreen = document.getElementById('boot-screen');
+    const bootText = document.getElementById('boot-text');
+    const bootBar = document.getElementById('boot-bar');
+    const loadPercent = document.getElementById('load-percent');
+
+    // 부팅 로그 메시지들
+    const logs = [
+      "INITIALIZING NOAH_CORE...",
+      "LOADING KERNEL_V.9.9...",
+      "CHECKING MEMORY INTEGRITY... [OK]",
+      "ACCESSING UTOPIA_COMPLEX MAINFRAME...",
+      "BYPASSING SECURITY PROTOCOLS...",
+      "LOADING ASSETS: [HYDRO_FARM]... [MED_CENTER]...",
+      "WARNING: AUDIO RECEPTORS DAMAGED",
+      "DECRYPTING CLASSIFIED FILES...",
+      "ESTABLISHING SECURE CONNECTION...",
+      "ACCESS GRANTED."
+    ];
+
+    let logIndex = 0;
+    let progress = 0;
+
+    function runBoot() {
+      // 1. 로그 텍스트 출력
+      if (logIndex < logs.length) {
+        bootText.innerText += "> " + logs[logIndex] + "\n";
+        // 스크롤 아래로 고정
+        const container = document.querySelector('.boot-log-container');
+        container.scrollTop = container.scrollHeight;
+        
+        logIndex++;
+        // 랜덤한 속도로 다음 줄 출력
+        setTimeout(runBoot, Math.random() * 300 + 100);
+      } else {
+        // 로그 다 뜨면 완료 처리 시작
+        finishBoot();
+      }
+
+      // 2. 진행바 채우기
+      progress += Math.floor(Math.random() * 10);
+      if(progress > 100) progress = 100;
+      
+      bootBar.style.width = progress + "%";
+      loadPercent.innerText = progress + "%";
+    }
+
+    function finishBoot() {
+      // 100% 강제 맞춤
+      bootBar.style.width = "100%";
+      loadPercent.innerText = "100%";
+      
+      setTimeout(() => {
+        // 로딩 화면 사라짐 효과
+        bootScreen.classList.add('hide');
+        document.body.classList.add('loaded'); // 스크롤 허용
+      }, 500);
+    }
+
+    // 시작
+    runBoot();
+
+
+    // =============================
+    // EXISTING SCRIPTS
+    // =============================
+    const dbMeter = document.getElementById('db-meter');
+    setInterval(() => {
+      const noise = Math.floor(Math.random() * 20) + 10; 
+      dbMeter.innerText = noise;
+      if(noise > 25) dbMeter.style.color = 'red';
+      else dbMeter.style.color = 'inherit';
+    }, 500);
+
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    document.querySelectorAll('h2, .main-title').forEach(el => {
+      el.dataset.value = el.innerText;
+      el.onmouseover = event => {
+        let iterations = 0;
+        const interval = setInterval(() => {
+          event.target.innerText = event.target.innerText.split("")
+            .map((letter, index) => {
+              if(index < iterations) return event.target.dataset.value[index];
+              return letters[Math.floor(Math.random() * 26)]
+            })
+            .join("");
+          if(iterations >= event.target.dataset.value.length) clearInterval(interval);
+          iterations += 1 / 3;
+        }, 30);
+      }
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          triggerSecurityAlert();
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+
+    observer.observe(document.getElementById('security'));
+
+    function triggerSecurityAlert() {
+      const overlay = document.getElementById('ip-overlay');
+      const bar = document.getElementById('trace-bar');
+      const text = document.getElementById('trace-text');
+      const btn = document.getElementById('escape-btn');
+      
+      overlay.style.display = 'flex';
+      
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 1;
+        bar.style.width = progress + '%';
+        text.innerText = `TRACING SIGNAL... ${progress}%`;
+        if(progress % 10 === 0) {
+          text.innerText += ` [IP: 192.168.${Math.floor(Math.random()*255)}.XXX]`;
+        }
+        if (progress >= 100) {
+          clearInterval(interval);
+          text.innerText = "LOCATION LOCKED: [SEOUL_SECTOR_7]";
+          text.style.color = "red";
+          text.style.animation = "blink 0.2s infinite";
+          btn.style.display = "block";
+        }
+      }, 50);
+    }
+  </script>
+
+</body>
+</html>
