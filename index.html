@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NOAH_HANDHELD_DEVICE_V.4.2</title>
+<title>NOAH_SYSTEM_GLITCH_FX</title>
 <style>
   /* 폰트 로드 */
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Black+Ops+One&family=Rubik+Glitch&display=swap');
@@ -14,7 +14,7 @@
     --alert-red: #ff0055;   
     --kronos-gold: #d4af37; 
     --glitch-pink: #ff00ff; 
-    --ui-dim: rgba(0, 255, 65, 0.1);
+    --ui-dim: rgba(0, 255, 65, 0.05);
   }
 
   * { box-sizing: border-box; }
@@ -27,12 +27,13 @@
     padding: 0;
     overflow-x: hidden;
     cursor: crosshair;
-    -webkit-font-smoothing: antialiased; /* 모바일 폰트 부드럽게 */
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
   }
 
-  body.loading { overflow: hidden; } /* 로딩 중 스크롤 방지 */
+  body.loading { overflow: hidden; } 
 
-  /* CRT 스캔라인 (전체) */
+  /* CRT 스캔라인 */
   body::before {
     content: " ";
     display: block;
@@ -45,219 +46,208 @@
   }
 
   /* =========================================
-     0. BOOT SEQUENCE (LOADING SCREEN)
+     BOOT SEQUENCE & START
      ========================================= */
   #boot-screen {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: #000;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    font-size: 1.2rem;
-    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #000; z-index: 99999;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 20px; transition: opacity 0.5s;
   }
-  #boot-screen.hide { opacity: 0; pointer-events: none; transform: scale(1.1); filter: blur(10px); }
+  #boot-screen.hide { opacity: 0; pointer-events: none; }
 
-  .boot-log-container {
-    width: 100%; max-width: 600px; height: 300px;
-    overflow: hidden; border: 1px solid #333; padding: 20px; margin-bottom: 20px;
-    background: rgba(0, 20, 0, 0.8); position: relative;
-    box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+  #start-btn {
+    border: 2px solid var(--term-green); background: rgba(0, 255, 65, 0.1);
+    color: var(--term-green); padding: 20px 40px; font-family: 'Black Ops One'; font-size: 1.5rem;
+    cursor: pointer; animation: blink-border 1s infinite; margin-bottom: 20px;
   }
-  .boot-log-text { color: var(--term-green); white-space: pre-wrap; line-height: 1.5; font-family: 'Share Tech Mono', monospace; }
-  .progress-container { width: 100%; max-width: 600px; height: 4px; background: #111; position: relative; }
+  #start-btn:hover { background: var(--term-green); color: black; }
+  @keyframes blink-border { 0%, 100% { box-shadow: 0 0 10px var(--term-green); } 50% { box-shadow: 0 0 0 transparent; } }
+
+  #boot-ui { display: none; width: 100%; flex-direction: column; align-items: center; }
+  .boot-log-container { width: 100%; max-width: 600px; height: 200px; border: 1px solid #333; padding: 20px; margin-bottom: 20px; background: rgba(0, 20, 0, 0.8); overflow: hidden; }
+  .boot-log-text { color: var(--term-green); white-space: pre-wrap; line-height: 1.5; font-size: 0.9rem; }
+  .progress-container { width: 100%; max-width: 600px; height: 4px; background: #111; }
   .progress-bar { height: 100%; background: var(--term-green); width: 0%; box-shadow: 0 0 10px var(--term-green); transition: width 0.1s; }
-  .blink-cursor { display: inline-block; width: 10px; height: 1.2rem; background: var(--term-green); animation: blink 0.5s infinite; vertical-align: middle; }
 
   /* =========================================
-     MAIN CSS (DESKTOP DEFAULT)
+     MODAL (POPUP) SYSTEM - ONLY FOR MARKET
+     ========================================= */
+  #modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+    z-index: 20000; display: none; justify-content: center; align-items: center;
+    padding: 20px;
+  }
+  
+  .modal-box {
+    width: 100%; max-width: 500px;
+    background: #050505; border: 2px solid var(--term-green);
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.2);
+    padding: 2px; transform: scale(0.9); opacity: 0; transition: all 0.2s;
+  }
+  .modal-box.active { transform: scale(1); opacity: 1; }
+
+  .modal-header {
+    background: var(--term-green); color: black; padding: 10px;
+    font-weight: bold; font-family: 'Black Ops One'; display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-close { cursor: pointer; font-size: 1.5rem; line-height: 1; }
+  .modal-content { padding: 20px; color: #ddd; }
+  
+  .modal-desc { 
+    font-size: 1rem; line-height: 1.6; margin-bottom: 20px; 
+    border-left: 3px solid var(--term-green); padding-left: 15px; 
+    white-space: pre-wrap; /* 줄바꿈 적용 */
+  }
+  
+  .modal-img { width: 100%; height: 200px; object-fit: contain; margin-bottom: 20px; border: 1px solid #333; image-rendering: pixelated; background: #111; }
+  
+  .modal-btn {
+    width: 100%; padding: 15px; background: transparent; border: 1px solid var(--term-green);
+    color: var(--term-green); font-family: 'Share Tech Mono'; font-size: 1.2rem; cursor: pointer;
+    transition: 0.2s;
+  }
+  .modal-btn:hover { background: var(--term-green); color: black; }
+
+  /* =========================================
+     MAIN UI
      ========================================= */
   .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
   .glitch { animation: text-flicker 3s infinite; }
   .redacted { background: currentColor; color: transparent; transition: 0.3s; cursor: help; }
   .redacted:hover { background: transparent; color: inherit; }
-  
   @keyframes text-flicker { 0% { opacity: 0.9; } 2% { opacity: 0.1; } 4% { opacity: 0.9; } 100% { opacity: 0.9; } }
 
-  header {
-    height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-    border-bottom: 2px solid var(--term-green); position: relative;
-  }
+  header { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border-bottom: 2px solid var(--term-green); }
   .main-title { font-family: 'Rubik Glitch', cursive; font-size: 5rem; color: var(--term-green); text-shadow: 4px 4px var(--alert-red); margin: 0; }
-  .lore-box { margin-top: 30px; background: var(--ui-dim); padding: 20px; border: 1px solid var(--term-green); max-width: 600px; text-align: left; font-size: 1.1rem; line-height: 1.6; }
-  
-  .noise-meter {
-    position: absolute; bottom: 20px; right: 20px;
-    border: 1px solid var(--alert-red); color: var(--alert-red); padding: 10px; font-weight: bold;
-  }
+  .lore-box { margin-top: 30px; background: var(--ui-dim); padding: 20px; border: 1px solid var(--term-green); max-width: 600px; text-align: left; }
+  .noise-meter { position: absolute; bottom: 60px; right: 20px; border: 1px solid var(--alert-red); color: var(--alert-red); padding: 10px; }
 
-  /* 섹션 스타일 */
-  #database { padding: 100px 0; border-bottom: 1px dashed #333; }
+  #database, #market, #security { padding: 100px 0; border-bottom: 1px dashed #333; }
   .section-header { font-family: 'Black Ops One'; font-size: 3rem; margin-bottom: 50px; border-left: 10px solid currentColor; padding-left: 20px; }
   
-  /* 그리드 (기본 3~4열) */
   .profile-grid, .market-grid, .wanted-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; }
   
   /* 카드 스타일 */
-  .file-card { border: 1px solid rgba(0, 255, 65, 0.3); padding: 30px; background: rgba(0, 20, 0, 0.4); position: relative; transition: 0.3s; }
+  .file-card { 
+    background: rgba(0, 20, 0, 0.4); border: 1px solid rgba(0, 255, 65, 0.3); 
+    padding: 30px; position: relative; transition: 0.3s; 
+  }
   .file-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,255,65,0.1); }
   .file-card.danger { border-color: var(--alert-red); color: var(--alert-red); }
+
+  /* 아이템 카드 (클릭 가능) */
+  .item-card { 
+    background: #111; border: 1px solid #444; padding: 15px; transition: 0.2s; cursor: pointer; 
+  }
+  .item-card:hover { border-color: var(--kronos-gold); transform: translateY(-5px); }
+
+  /* 정화조 포스터 스타일 */
+  .poster { 
+    background: #ddd; color: #111; padding: 15px; 
+    transform: rotate(2deg); box-shadow: 10px 10px 20px black; transition: 0.3s;
+  }
+  .poster:hover { transform: scale(1.05) rotate(0deg); z-index: 10; }
+  .poster:nth-child(even) { transform: rotate(-1deg); }
+
   .stamp { position: absolute; top: 20px; right: 20px; border: 3px solid; padding: 5px 15px; font-weight: 900; transform: rotate(-15deg); opacity: 0.7; font-size: 1.2rem; }
   .data-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px; }
 
-  /* 마켓 스타일 */
-  #market { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); padding: 100px 0; border-top: 5px solid var(--kronos-gold); color: #ccc; }
-  .market-title { color: var(--kronos-gold); text-shadow: 0 0 15px var(--kronos-gold); }
-  .item-card { background: #111; border: 1px solid #444; padding: 15px; transition: 0.2s; }
-  .item-card:hover { border-color: var(--kronos-gold); }
-  .item-img {
-    width: 100%; height: 250px; object-fit: contain; background: #000; margin-bottom: 15px; border: 1px solid #333;
-    image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;
-  }
-  .price-tag { display: flex; justify-content: space-between; font-weight: bold; margin-top: 15px; padding-top: 10px; border-top: 1px solid #333; }
-  .btc { color: #f7931a; } .amp { color: #00bcd4; }
-
-  /* 보안 구역 스타일 */
-  #security { background-color: #000; border-top: 10px solid var(--alert-red); padding: 100px 0; min-height: 100vh; position: relative; color: white; }
-  .tank-title { color: var(--alert-red); animation: blink 1s infinite; }
-  @keyframes blink { 50% { opacity: 0.3; } }
-  .poster { background: #ddd; color: #111; padding: 15px; transform: rotate(2deg); box-shadow: 10px 10px 20px black; }
-  .poster:nth-child(even) { transform: rotate(-1deg); }
-  .mugshot { height: 200px; background: #222; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #555; overflow: hidden; position: relative;}
-  .mugshot img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.5); }
+  .item-img { width: 100%; height: 250px; object-fit: contain; background: #000; margin-bottom: 15px; border: 1px solid #333; image-rendering: pixelated; }
+  .mugshot { height: 200px; background: #222; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 4rem; overflow: hidden; position: relative; }
   .liquidated { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 2.5rem; color: var(--alert-red); border: 5px solid var(--alert-red); padding: 10px; font-weight: 900; background: rgba(255,255,255,0.7); }
 
-  /* IP 추적 오버레이 */
   #ip-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: none; flex-direction: column; justify-content: center; align-items: center; color: var(--alert-red); }
   .trace-box { border: 2px solid var(--alert-red); padding: 40px; text-align: center; width: 80%; max-width: 600px; box-shadow: 0 0 50px var(--alert-red); }
   .bar-bg { width: 100%; height: 20px; background: #300; margin: 20px 0; }
-  .bar-fill { height: 100%; background: var(--alert-red); width: 0%; transition: width 0.1s; }
+  .bar-fill { height: 100%; background: var(--alert-red); width: 0%; }
 
-  /* =========================================
-     MOBILE OPTIMIZATION (MEDIA QUERIES)
-     모바일 전용 스타일 (화면 너비 768px 이하)
-     ========================================= */
   @media (max-width: 768px) {
-    /* 1. 타이포그래피 축소 */
-    .main-title { font-size: 2.5rem; text-shadow: 2px 2px var(--alert-red); }
-    .section-header { font-size: 2rem; border-left-width: 5px; margin-bottom: 30px; }
-    .lore-box { font-size: 0.95rem; width: 95%; padding: 15px; }
-
-    /* 2. 레이아웃: 무조건 한 줄 보기 (1열) */
-    .profile-grid, .market-grid, .wanted-grid {
-      grid-template-columns: 1fr; /* 1개씩 꽉 차게 */
-      gap: 30px;
-    }
-
-    /* 3. 섹션 간격 줄이기 */
-    header { height: auto; min-height: 100vh; padding: 60px 0; justify-content: center; }
+    .main-title { font-size: 2.5rem; }
+    .profile-grid, .market-grid, .wanted-grid { grid-template-columns: 1fr; }
+    header { padding: 60px 0; }
     #database, #market, #security { padding: 50px 0; }
-    .container { padding: 15px; }
-
-    /* 4. UI 요소 재배치 */
-    .noise-meter {
-      position: relative; /* 바닥 고정 해제 */
-      bottom: auto; right: auto;
-      margin-top: 30px;
-      width: 90%;
-      text-align: center;
-      background: rgba(0,0,0,0.8);
-    }
-
-    /* 5. WANTED 포스터 정렬 (돌아가 있으면 모바일에서 보기 힘듦) */
-    .poster, .poster:nth-child(even) { transform: none; margin: 0 auto; width: 100%; max-width: 400px; }
-
-    /* 6. 부팅 화면 텍스트 크기 조절 */
-    .boot-log-text { font-size: 0.8rem; }
-    .boot-log-container { height: 200px; width: 90%; }
-    .progress-container { width: 90%; }
-
-    /* 7. IP 추적창 모바일 대응 */
-    .trace-box { width: 95%; padding: 20px; }
-    .trace-box h1 { font-size: 2rem !important; }
-
-    /* 8. 터치 피드백 (호버 대신) */
-    .file-card:active, .item-card:active {
-      border-color: #fff;
-      transform: scale(0.98);
-    }
-    
-    /* 9. 모바일에서만 보이는 안내 문구 */
-    .lore-box::after {
-      content: "\n[!] HANDHELD_MODE ACTIVE";
-      display: block;
-      color: var(--kronos-gold);
-      margin-top: 10px;
-      font-weight: bold;
-      border-top: 1px dashed var(--term-green);
-      padding-top: 5px;
-    }
+    .noise-meter { position: relative; bottom: auto; right: auto; margin-top: 30px; width: 90%; text-align: center; background: rgba(0,0,0,0.8); }
+    .poster, .poster:nth-child(even) { transform: none; margin: 0 auto; width: 100%; } 
+    .poster:hover { transform: scale(1.02); }
+    .modal-box { width: 95%; }
   }
-
 </style>
 </head>
 <body class="loading">
 
   <!-- 부팅 화면 -->
   <div id="boot-screen">
-    <div class="boot-log-container">
-      <div id="boot-text" class="boot-log-text"></div>
-      <span class="blink-cursor"></span>
+    <button id="start-btn">INITIALIZE SYSTEM</button>
+    <div id="boot-ui" style="display:none;">
+      <div class="boot-log-container"><div id="boot-text" class="boot-log-text"></div></div>
+      <div style="width: 100%; max-width: 600px; display:flex; justify-content:space-between; margin-bottom:5px; color: #555;">
+        <span>SYSTEM LOADING...</span><span id="load-percent">0%</span>
+      </div>
+      <div class="progress-container"><div id="boot-bar" class="progress-bar"></div></div>
     </div>
-    <div style="width: 100%; max-width: 600px; display:flex; justify-content:space-between; margin-bottom:5px; font-size: 0.9rem; color: #555; padding: 0 5%;">
-      <span>SYSTEM INITIALIZING...</span>
-      <span id="load-percent">0%</span>
-    </div>
-    <div class="progress-container">
-      <div id="boot-bar" class="progress-bar"></div>
+  </div>
+
+  <!-- 아이템 전용 팝업 -->
+  <div id="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span id="modal-title">TITLE</span>
+        <span class="modal-close" onclick="closeModal()">X</span>
+      </div>
+      <div class="modal-content">
+        <img id="modal-image" class="modal-img" src="" alt="Item Image" style="display:none;">
+        <div id="modal-description" class="modal-desc"></div>
+        <button id="modal-action-btn" class="modal-btn">PURCHASE</button>
+      </div>
     </div>
   </div>
 
   <!-- 헤더 -->
   <header>
     <div class="glitch main-title" data-text="UTOPIA_COMPLEX">UTOPIA_COMPLEX</div>
-    <div class="lore-box" id="lore-text">
+    <div class="lore-box">
       > SYSTEM_BOOT_SEQUENCE...<br>
       > CONNECTING TO [NOAH_CORE]... SUCCESS.<br>
-      > WORLD_STATE: 멸망 (APOCALYPSE)<br>
-      > LOCATION: 최후 거점 '콘크리트 방주'<br>
       > PROTOCOL: <span style="color:var(--alert-red)">절대 정숙 (SILENCE)</span><br>
-      <br>
-      "소리를 내는 순간, 너는 더 이상 시민이 아니다."
+      <br>"소리를 내는 순간, 너는 더 이상 시민이 아니다."
     </div>
-    <div class="noise-meter">
-      NOISE LEVEL: <span id="db-meter">12</span> dB <br>
-      STATUS: <span style="color:var(--term-green)">SAFE</span>
-    </div>
+    <div class="noise-meter">NOISE: <span id="db-meter">12</span> dB</div>
   </header>
 
   <!-- 프로필 -->
   <section id="database" class="container">
-    <h2 class="section-header" style="color: var(--term-green);">PERSONNEL_DATABASE</h2>
+    <h2 class="section-header" style="color: var(--term-green);">PERSONNEL</h2>
     <div class="profile-grid">
-      <div class="file-card">
-        <div class="stamp" style="color: var(--glitch-pink); border-color: var(--glitch-pink);">MAD DOCTOR</div>
-        <h2 style="color: var(--glitch-pink); border-bottom: 2px solid var(--glitch-pink); padding-bottom:10px;">ID: UNDERTAKER</h2>
+      <!-- 장의사 -->
+      <div class="file-card hover-sfx">
+        <div class="stamp" style="color:var(--glitch-pink);border-color:var(--glitch-pink);">MAD DOCTOR</div>
+        <h2 style="color:var(--glitch-pink);border-bottom: 2px solid var(--glitch-pink);">ID: UNDERTAKER</h2>
         <div class="data-row"><span>AFFILIATION</span> <span>Medical Sector</span></div>
         <div class="data-row"><span>WEAPON</span> <span>Chainsaw (Modified)</span></div>
         <div class="data-row"><span>HAIR</span> <span>Pink (#FF00FF)</span></div>
-        <div class="data-row"><span>NOTE</span> <span>수술 성공률 99.9% (원리 불명)</span></div>
+        <div class="data-row"><span>NOTE</span> <span>수술 성공률 99.9%</span></div>
         <br>
-        <p style="font-size: 0.9rem; opacity: 0.8;">"감염의 해부자. 논리 회로 오류. <br><span class="redacted">빵젖소</span>에 대한 기묘한 집착을 보임."</p>
+        <p style="font-size:0.9rem; opacity:0.8;">
+          "감염의 해부자. 논리 회로 오류.<br>
+          <span class="redacted">빵젖소</span>에 대한 기묘한 집착(보호자 자칭)."
+        </p>
       </div>
-      <div class="file-card danger">
+
+      <!-- 빵젖소 -->
+      <div class="file-card danger hover-sfx">
         <div class="stamp">CLASSIFIED</div>
-        <h2 style="border-bottom: 2px solid var(--alert-red); padding-bottom:10px;">ID: BREAD_COW</h2>
-        <div class="data-row"><span>SPECIES</span> <span>Mutant (Bovine-Human)</span></div>
+        <h2 style="border-bottom:2px solid var(--alert-red);">ID: BREAD_COW</h2>
+        <div class="data-row"><span>SPECIES</span> <span>Mutant (Bovine)</span></div>
+        <div class="data-row"><span>AGE</span> <span>2 (Bio-Age)</span></div>
         <div class="data-row"><span>RESOURCE</span> <span class="redacted">HIGH_GRADE_MILK</span></div>
-        <div class="data-row"><span>RELATION</span> <span>Pet / Specimen</span></div>
         <div class="data-row"><span>STATE</span> <span>Shame / Anxiety</span></div>
         <br>
-        <p style="font-size: 0.9rem; opacity: 0.8;">"유토피아 컴플렉스의 희귀 자원 생산체.<br>주기적인 <span class="redacted">발정기</span> 데이터 관측 필요."</p>
+        <p style="font-size:0.9rem; opacity:0.8;">
+          "유토피아 희귀 자원 생산체.<br>
+          매월 15일 <span class="redacted">발정기</span> 데이터 관측 및 착유 필요."
+        </p>
       </div>
     </div>
   </section>
@@ -265,27 +255,60 @@
   <!-- 마켓 -->
   <section id="market">
     <div class="container">
-      <h2 class="section-header market-title">KRONOS INDUSTRY</h2>
-      <p style="margin-bottom: 30px;">>> ENCRYPTED CHANNEL ESTABLISHED (익명 거래 보장)</p>
+      <h2 class="section-header market-title">KRONOS MARKET</h2>
+      <p style="margin-bottom:30px;">>> CLICK ITEM FOR DETAILS</p>
       <div class="market-grid">
-        <div class="item-card">
+        <div class="item-card interactable" 
+             data-title="황도 통조림 (2024)" 
+             data-img="https://i.ifh.cc/4RtgcR.jpg"
+             data-desc="[상태: 녹슮]
+전쟁 이전 생산된 귀한 당분 공급원.
+캔 표면에 정체불명의 점액질이 묻어있으나 내용물은 멀쩡해 보임.
+효과: 스트레스 -10, 복통 확률 15%."
+             data-btn="PURCHASE (0.002 BTC)">
           <img src="https://i.ifh.cc/4RtgcR.jpg" class="item-img" alt="Hwangdo">
-          <h3 style="margin:0">황도 통조림 (2024)</h3>
+          <h3>황도 통조림 (2024)</h3>
           <div class="price-tag"><span class="btc">₿ 0.002</span><span class="amp">💉 3 AMP</span></div>
         </div>
-        <div class="item-card">
+
+        <div class="item-card interactable"
+             data-title="MP5SD 소음기 부품"
+             data-img="https://i.ifh.cc/mj2bDQ.jpg"
+             data-desc="[출처: 정화조 무기고]
+특수 작전용 소음기 내부 배플(Baffle).
+화약 찌꺼기가 묻어있음.
+이것만 있으면 당신도 '무음 사살'이 가능할지도 모릅니다.
+※ 조립 설명서 미포함."
+             data-btn="PURCHASE (0.05 BTC)">
           <img src="https://i.ifh.cc/mj2bDQ.jpg" class="item-img" alt="Silencer">
-          <h3 style="margin:0">MP5SD 소음기 부품</h3>
+          <h3>MP5SD 소음기 부품</h3>
           <div class="price-tag"><span class="btc">₿ 0.05</span><span class="amp">💉 80 AMP</span></div>
         </div>
-        <div class="item-card">
+
+        <div class="item-card interactable"
+             data-title="불탄 모나리자 조각"
+             data-img="https://i.ifh.cc/ocHDkt.jpg"
+             data-desc="[진품 여부: 불명]
+루브르 박물관 붕괴 현장에서 회수되었다고 주장하는 캔버스 조각.
+미소 부분만 남아있어 기괴함.
+부유층의 벙커 인테리어용으로 인기."
+             data-btn="BID NOW (12.5 BTC)">
           <img src="https://i.ifh.cc/ocHDkt.jpg" class="item-img" alt="MonaLisa">
-          <h3 style="margin:0">불탄 모나리자 조각</h3>
+          <h3>불탄 모나리자 조각</h3>
           <div class="price-tag"><span class="btc">₿ 12.5</span><span class="amp">💉 5000 AMP</span></div>
         </div>
-        <div class="item-card">
+
+        <div class="item-card interactable"
+             data-title="수상한 알약 (랜덤)"
+             data-img="https://i.ifh.cc/8spTO8.jpg"
+             data-desc="[위험물]
+무슨 약인지 아무도 모릅니다.
+항생제일 수도 있고, 쥐약일 수도 있습니다.
+인생을 건 도박을 하고 싶다면 추천합니다.
+생존 확률: 50%."
+             data-btn="CONSUME">
           <img src="https://i.ifh.cc/8spTO8.jpg" class="item-img" alt="Pills">
-          <h3 style="margin:0">수상한 알약 (랜덤)</h3>
+          <h3>수상한 알약 (랜덤)</h3>
           <div class="price-tag"><span class="btc">₿ 0.0001</span><span class="amp">💉 0.5 AMP</span></div>
         </div>
       </div>
@@ -296,159 +319,166 @@
   <section id="security">
     <div id="ip-overlay">
       <div class="trace-box">
-        <h1 style="font-size: 3rem; margin:0;">⚠️ WARNING ⚠️</h1>
-        <p style="font-size: 1.5rem;">UNAUTHORIZED ACCESS DETECTED</p>
-        <p>정화조 감시망에 포착되었습니다.</p>
+        <h1 style="font-size: 3rem;">⚠️ WARNING ⚠️</h1>
+        <p>UNAUTHORIZED ACCESS DETECTED</p>
         <div class="bar-bg"><div class="bar-fill" id="trace-bar"></div></div>
         <div id="trace-text">TRACING SIGNAL... 0%</div>
-        <button onclick="document.getElementById('ip-overlay').style.display='none'; alert('도망칠 수 없다.');" style="margin-top:20px; padding:10px 30px; background:var(--alert-red); border:none; font-weight:bold; cursor:pointer; display:none;" id="escape-btn">연결 강제 종료 시도</button>
+        <button id="escape-btn" onclick="closeAlert()" style="display:none; margin-top:20px; padding:10px 30px; background:var(--alert-red); border:none; font-weight:bold;">ACKNOWLEDGE</button>
       </div>
     </div>
     <div class="container">
-      <h2 class="section-header tank-title">PURIFICATION TANK (정화조)</h2>
-      <p style="text-align: center; border: 1px solid white; padding: 10px;">※ 소음 유발자 및 반체제 인사 수배 명단 ※<br>신고 시: 배급표 2배 + 신선한 물 1L</p>
+      <h2 class="section-header tank-title">PURIFICATION TANK</h2>
+      
       <div class="wanted-grid">
-        <div class="poster">
-          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2.5rem; margin:10px 0;">WANTED</h2>
+        <div class="poster hover-sfx">
+          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2rem; margin:10px 0;">WANTED</h2>
           <div class="mugshot">👻</div>
           <div style="font-weight:bold;"><p>NAME: GHOST-04</p><p>CRIME: 자원 밀반출</p><p>REWARD: 항생제 1 Box</p></div>
         </div>
-        <div class="poster">
+        
+        <div class="poster hover-sfx">
           <div class="liquidated">LIQUIDATED</div>
-          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2.5rem; margin:10px 0;">WANTED</h2>
+          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2rem; margin:10px 0;">WANTED</h2>
           <div class="mugshot" style="background:#500;">💀</div>
-          <div style="font-weight:bold;"><p>NAME: 김철수</p><p>CRIME: 코골이 (85dB)</p><p>STATUS: 즉결 처분 완료</p></div>
+          <div style="font-weight:bold;"><p>NAME: 김철수</p><p>CRIME: 코골이</p><p>STATUS: 처분 완료</p></div>
         </div>
-        <div class="poster">
-          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2.5rem; margin:10px 0;">WANTED</h2>
+        
+        <div class="poster hover-sfx">
+          <h2 style="text-align:center; font-family:'Black Ops One'; font-size: 2rem; margin:10px 0;">WANTED</h2>
           <div class="mugshot">🐄</div>
-          <div style="font-weight:bold;"><p>TARGET: BREAD_COW</p><p>ORDER: <strong>생포 필수</strong></p><p>NOTE: 장의사 인계</p></div>
+          <div style="font-weight:bold;"><p>TARGET: BREAD_COW</p><p>ORDER: <strong>생포 필수</strong></p></div>
         </div>
       </div>
     </div>
   </section>
 
   <script>
-    // =============================
-    // BOOT SEQUENCE SCRIPT
-    // =============================
-    const bootScreen = document.getElementById('boot-screen');
-    const bootText = document.getElementById('boot-text');
-    const bootBar = document.getElementById('boot-bar');
-    const loadPercent = document.getElementById('load-percent');
-
-    const logs = [
-      "INITIALIZING NOAH_CORE...",
-      "LOADING KERNEL_V.9.9...",
-      "CHECKING MEMORY INTEGRITY... [OK]",
-      "ACCESSING UTOPIA_COMPLEX MAINFRAME...",
-      "BYPASSING SECURITY PROTOCOLS...",
-      "LOADING ASSETS: [HYDRO_FARM]... [MED_CENTER]...",
-      "WARNING: AUDIO RECEPTORS DAMAGED",
-      "DECRYPTING CLASSIFIED FILES...",
-      "ESTABLISHING SECURE CONNECTION...",
-      "ACCESS GRANTED."
-    ];
-
-    let logIndex = 0;
-    let progress = 0;
-
-    function runBoot() {
-      if (logIndex < logs.length) {
-        bootText.innerText += "> " + logs[logIndex] + "\n";
-        const container = document.querySelector('.boot-log-container');
-        container.scrollTop = container.scrollHeight;
-        logIndex++;
-        setTimeout(runBoot, Math.random() * 200 + 50); // 속도 약간 빠르게 조정
-      } else {
-        finishBoot();
-      }
-      progress += Math.floor(Math.random() * 15);
-      if(progress > 100) progress = 100;
-      bootBar.style.width = progress + "%";
-      loadPercent.innerText = progress + "%";
+    // AUDIO
+    let audioCtx; let droneGain;
+    function initAudio() {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+      const droneOsc = audioCtx.createOscillator(); droneGain = audioCtx.createGain();
+      droneOsc.type = 'sawtooth'; droneOsc.frequency.value = 50; droneGain.gain.value = 0.05;
+      droneOsc.connect(droneGain); droneGain.connect(audioCtx.destination); droneOsc.start();
+    }
+    function playClickSound() {
+      if(!audioCtx) return;
+      const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+    function playStaticSound() {
+      if(!audioCtx) return;
+      const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+      osc.type = 'sawtooth'; osc.frequency.value = 100;
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.05);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.05);
     }
 
-    function finishBoot() {
-      bootBar.style.width = "100%";
-      loadPercent.innerText = "100%";
-      setTimeout(() => {
-        bootScreen.classList.add('hide');
-        document.body.classList.remove('loading'); 
-      }, 500);
-    }
+    // ===============================================
+    // 🔥 GLITCH TEXT EFFECT (HACKER EFFECT)
+    // ===============================================
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+";
+    
+    // 이펙트를 적용할 요소들 선택 (제목, H2, H3, 버튼, 스탬프, 데이터 값 등)
+    const glitchTargets = document.querySelectorAll('h1, h2, h3, .modal-btn, .stamp, .data-row span, .main-title');
 
-    runBoot();
+    glitchTargets.forEach(target => {
+      target.dataset.value = target.innerText; // 원래 텍스트 저장
 
-    // =============================
-    // EXISTING SCRIPTS
-    // =============================
-    const dbMeter = document.getElementById('db-meter');
-    setInterval(() => {
-      const noise = Math.floor(Math.random() * 20) + 10; 
-      dbMeter.innerText = noise;
-      if(noise > 25) dbMeter.style.color = 'red';
-      else dbMeter.style.color = 'inherit';
-    }, 500);
-
-    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    document.querySelectorAll('h2, .main-title').forEach(el => {
-      el.dataset.value = el.innerText;
-      // 모바일은 클릭(터치) 시 작동
-      el.addEventListener('click', event => {
+      target.addEventListener('mouseover', event => {
         let iterations = 0;
+        
+        // 기존 인터벌이 있다면 제거 (중복 실행 방지)
+        if(event.target.interval) clearInterval(event.target.interval);
+
         const interval = setInterval(() => {
           event.target.innerText = event.target.innerText.split("")
             .map((letter, index) => {
               if(index < iterations) return event.target.dataset.value[index];
-              return letters[Math.floor(Math.random() * 26)]
+              return chars[Math.floor(Math.random() * chars.length)]
             })
             .join("");
-          if(iterations >= event.target.dataset.value.length) clearInterval(interval);
-          iterations += 1 / 3;
+
+          if(iterations >= event.target.dataset.value.length) {
+            clearInterval(interval);
+          }
+          iterations += 1 / 2; // 속도 조절 (숫자가 클수록 빠름)
         }, 30);
+        
+        event.target.interval = interval; // 인터벌 ID 저장
       });
-      // 데스크톱 호버 유지
-      el.onmouseover = el.onclick; 
     });
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          triggerSecurityAlert();
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.3 }); // 모바일 감안해서 0.3으로 완화
+    // MODAL LOGIC (ONLY FOR .interactable)
+    const modal = document.getElementById('modal-overlay');
+    const modalBox = document.querySelector('.modal-box');
+    const mTitle = document.getElementById('modal-title');
+    const mDesc = document.getElementById('modal-description');
+    const mImg = document.getElementById('modal-image');
+    const mBtn = document.getElementById('modal-action-btn');
 
+    document.querySelectorAll('.interactable').forEach(card => {
+      card.addEventListener('click', () => {
+        playClickSound();
+        mTitle.innerText = card.getAttribute('data-title');
+        mDesc.innerText = card.getAttribute('data-desc');
+        mBtn.innerText = card.getAttribute('data-btn') || "CLOSE";
+        const imgSrc = card.getAttribute('data-img');
+        if(imgSrc) { mImg.src = imgSrc; mImg.style.display = 'block'; } else { mImg.style.display = 'none'; }
+        modal.style.display = 'flex'; setTimeout(() => modalBox.classList.add('active'), 10);
+      });
+    });
+    
+    document.querySelectorAll('.hover-sfx, .interactable').forEach(el => {
+      el.addEventListener('mouseenter', () => { if(Math.random() > 0.7) playStaticSound(); });
+    });
+
+    function closeModal() {
+      playClickSound(); modalBox.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 200);
+    }
+    modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+    mBtn.addEventListener('click', () => { playClickSound(); alert("COMMAND EXECUTED"); closeModal(); });
+
+    // BOOT
+    const startBtn = document.getElementById('start-btn');
+    startBtn.addEventListener('click', () => {
+      startBtn.style.display = 'none'; document.getElementById('boot-ui').style.display = 'flex';
+      initAudio(); runBoot();
+    });
+    const logs = ["INITIALIZING...", "LOADING KERNEL...", "DECRYPTING LORE...", "SYSTEM READY."];
+    let logIdx = 0;
+    function runBoot() {
+      if(logIdx < logs.length) {
+        document.getElementById('boot-text').innerText += "> " + logs[logIdx++] + "\n";
+        playStaticSound(); setTimeout(runBoot, 200);
+      } else {
+        document.getElementById('boot-bar').style.width = "100%"; document.getElementById('load-percent').innerText = "100%";
+        setTimeout(() => { document.getElementById('boot-screen').classList.add('hide'); document.body.classList.remove('loading'); }, 500);
+      }
+    }
+
+    // ETC
+    setInterval(() => {
+      const db = Math.floor(Math.random() * 20) + 10;
+      document.getElementById('db-meter').innerText = db;
+      document.getElementById('db-meter').style.color = db > 25 ? 'red' : 'inherit';
+    }, 500);
+
+    const observer = new IntersectionObserver(es => { es.forEach(e => { if(e.isIntersecting) { triggerAlert(); observer.unobserve(e.target); } }) }, {threshold:0.3});
     observer.observe(document.getElementById('security'));
 
-    function triggerSecurityAlert() {
-      const overlay = document.getElementById('ip-overlay');
-      const bar = document.getElementById('trace-bar');
-      const text = document.getElementById('trace-text');
-      const btn = document.getElementById('escape-btn');
-      
-      overlay.style.display = 'flex';
-      
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 1;
-        bar.style.width = progress + '%';
-        text.innerText = `TRACING... ${progress}%`;
-        if(progress % 10 === 0) {
-          text.innerText += ` [IP: 192.168.${Math.floor(Math.random()*255)}.XXX]`;
-        }
-        if (progress >= 100) {
-          clearInterval(interval);
-          text.innerText = "LOCATION LOCKED";
-          text.style.color = "red";
-          text.style.animation = "blink 0.2s infinite";
-          btn.style.display = "block";
-        }
-      }, 30); // 모바일에서 너무 오래 걸리면 답답하니 속도 up
+    function triggerAlert() {
+      document.getElementById('ip-overlay').style.display = 'flex'; playClickSound();
+      let p=0; const intv = setInterval(() => {
+        p++; document.getElementById('trace-bar').style.width = p+'%'; document.getElementById('trace-text').innerText = `TRACING... ${p}%`;
+        if(p>=100) { clearInterval(intv); document.getElementById('trace-text').innerText = "LOCATION LOCKED"; document.getElementById('trace-text').style.color = "red"; document.getElementById('escape-btn').style.display = "block"; playClickSound(); }
+      }, 30);
     }
+    function closeAlert() { document.getElementById('ip-overlay').style.display = 'none'; playClickSound(); }
   </script>
-
 </body>
 </html>
